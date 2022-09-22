@@ -25,4 +25,6 @@ df['date'][df['date'] == 'Address on Administration Goals (Budget Message)'] = t
 df['speech'] = df['speech'].str.split('\n').str[3:]
 # make a string list
 df['speech'] = df['speech'].str.join(' ')
+# replace \ with ''
+df['speech'] = df['speech'].str.replace('\\\'', '')
 print(df['speech'].values)
