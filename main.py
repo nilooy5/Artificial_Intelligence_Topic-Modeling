@@ -14,17 +14,15 @@ df['speech'] = df['speech'].str.replace('\nAddress on Administration Goals\n', '
 df['speech'] = df['speech'].str.replace('\nAddress to Congress \n', '')
 
 df['president'] = df['speech']
-# delete everything in the president column after the first line break
+
 df['president'] = df['president'].str.split('\n').str[0]
 df['date'] = df['speech'].str.split('\n').str[1]
-# print president name where president name is empty string
-# print(df[df['president'] == '']['president'])
-# print(df[df['president'] == '']['date'])
 
 temp_date = df[df['date'] == 'Address on Administration Goals (Budget Message)']['speech'].str.split('\n').str[3]
-# print(temp_date)
-df[df['date'] == 'Address on Administration Goals (Budget Message)'] = temp_date.values[0]
+df['date'][df['date'] == 'Address on Administration Goals (Budget Message)'] = temp_date.values[0]
 
-print(df['date'].values)
-print(df['president'].values)
-
+# delete first 3 lines of speech
+df['speech'] = df['speech'].str.split('\n').str[3:]
+# make a string list
+df['speech'] = df['speech'].str.join(' ')
+print(df['speech'].values)
