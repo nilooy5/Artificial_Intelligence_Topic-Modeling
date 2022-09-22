@@ -53,20 +53,29 @@ df['speech'] = df['speech'].apply(lemmatize_text)
 df['speech'] = df['speech'].apply(lambda x: [item for item in x if item not in stop_words])
 df['speech'] = df['speech'].apply(lambda x: ' '.join(x))
 
-# perform stemming
-stemmer = PorterStemmer()
+# # perform stemming
+# stemmer = PorterStemmer()
+#
+#
+# def stem_text(text):
+#     return [stemmer.stem(w) for w in word_tokenize(text)]
+#
+#
+# df['speech'] = df['speech'].apply(stem_text)
+# df['speech'] = df['speech'].apply(lambda x: [item for item in x if item not in stop_words])
+# df['speech'] = df['speech'].apply(lambda x: ' '.join(x))
+#
+# # remove punctuation
+#
+# df['speech'] = df['speech'].str.replace('[{}]'.format(string.punctuation), '')
 
-
-def stem_text(text):
-    return [stemmer.stem(w) for w in word_tokenize(text)]
-
-
-df['speech'] = df['speech'].apply(stem_text)
-df['speech'] = df['speech'].apply(lambda x: [item for item in x if item not in stop_words])
-df['speech'] = df['speech'].apply(lambda x: ' '.join(x))
-
-# remove punctuation
-
-df['speech'] = df['speech'].str.replace('[{}]'.format(string.punctuation), '')
-
-print(df['speech'].head(10))
+print(df['speech'].values[0])
+#
+# from gensim import corpora
+#
+# # create a dictionary from a list of speeches
+# dictionary = corpora.Dictionary(df['speech'])
+#
+# # convert the dictionary to a bag of words
+# corpus = [dictionary.doc2bow(speech) for speech in df['speech']]
+# print(corpus[0])
