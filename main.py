@@ -1,5 +1,6 @@
 import csv
 import os
+import string
 import pandas as pd
 import numpy as np
 import nltk
@@ -65,9 +66,7 @@ df['speech'] = df['speech'].apply(lambda x: [item for item in x if item not in s
 df['speech'] = df['speech'].apply(lambda x: ' '.join(x))
 
 # remove punctuation
-import string
 
 df['speech'] = df['speech'].str.replace('[{}]'.format(string.punctuation), '')
-
 
 print(df['speech'].head(10))
