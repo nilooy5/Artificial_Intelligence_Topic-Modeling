@@ -2,12 +2,16 @@ import csv
 import os
 import string
 import pandas as pd
-import numpy as np
 import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
+import re
+from gensim import models, corpora
+from nltk import word_tokenize, sent_tokenize
+from nltk.corpus import stopwords
+from nltk import pos_tag
 
 nltk.download('omw-1.4')
 nltk.download('stopwords')
@@ -79,3 +83,73 @@ print(df['speech'].values[0])
 # # convert the dictionary to a bag of words
 # corpus = [dictionary.doc2bow(speech) for speech in df['speech']]
 # print(corpus[0])
+
+NUM_TOPICS = 5
+STOPWORDS = stopwords.words('english')
+
+wnl = WordNetLemmatizer()
+
+
+def penn2morphy(penntag):
+    """ Converts Penn Treebank tags to WordNet. """
+    morphy_tag = {'NN': 'n', 'JJ': 'a',
+                  'VB': 'v', 'RB': 'r'}
+    try:
+        return morphy_tag[penntag[:2]]
+    except:
+        return 'n'
+
+
+def lemmatize_sent(text):
+    # Text input is string, returns lowercased strings.
+    return [wnl.lemmatize(word.lower(), pos=penn2morphy(tag))
+            for word, tag in pos_tag(word_tokenize(text))]
+
+
+def clean_text(text):
+    tokenized_text = word_tokenize(text.lower())
+    cleaned_text = [t for t in tokenized_text if t not in STOPWORDS and re.match('[a-zA-Z\-][a-zA-Z\-]{2,}', t)]
+    return lemmatize_sent(' '.join(cleaned_text))
+
+
+# tokenize speeches and save them in a list
+tokenized_speeches = [word_tokenize(speech) for speech in df['speech']]
+# save tokenized speech to new column
+df['tokens'] = tokenized_speeches
+print(df['tokens'].values[0])
+print(df['tokens'].values[1])
+print(df['tokens'].values[2])
+print(df['tokens'].values[3])
+
+# Build a Dictionary - association word to numeric id
+dictionary = corpora.Dictionary(df.tokens)
+# dictionary.filter_extremes(no_below=3, no_above=.03)
+
+# Transform the collection of texts to a numerical form
+corpus = [dictionary.doc2bow(text) for text in df.tokens]
+
+# Build the LDA model
+lda_model = models.LdaModel(corpus=corpus,
+                            num_topics=20,
+                            id2word=dictionary)
+
+print()
+print("LDA Model:")
+
+for idx in range(20):
+    # Print the first 10 most representative topics
+    print("Topic #%s:" % idx, lda_model.print_topic(idx, 20))
+
+
+# build the LSI model
+lsi_model = models.LsiModel(corpus=corpus, num_topics=20, id2word=dictionary)
+
+print()
+print("LSI Model:")
+for idx in range(20):
+    # Print the first 10 most representative topics
+    print("Topic #%s:" % idx, lsi_model.print_topic(idx, 20))
+
+print()
+print("first 20")
+print(lsi_model.print_topic(1,20))
