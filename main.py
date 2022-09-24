@@ -40,6 +40,10 @@ df['speech'] = df['speech'].str.split('\n').str[3:]
 df['speech'] = df['speech'].str.join(' ')
 # replace \ with ''
 df['speech'] = df['speech'].str.replace('\\\'', '')
+# decapitalize
+df['speech'] = df['speech'].str.lower()
+# remove punctuation
+df['speech'] = df['speech'].str.replace('[{}]'.format(string.punctuation), '')
 
 # perform lemmatization
 lemmatizer = WordNetLemmatizer()
@@ -65,10 +69,6 @@ df['speech'] = df['speech'].apply(lambda x: ' '.join(x))
 # df['speech'] = df['speech'].apply(lambda x: [item for item in x if item not in stop_words])
 # df['speech'] = df['speech'].apply(lambda x: ' '.join(x))
 #
-# # remove punctuation
-#
-# df['speech'] = df['speech'].str.replace('[{}]'.format(string.punctuation), '')
-
 print(df['speech'].values[0])
 #
 # from gensim import corpora
