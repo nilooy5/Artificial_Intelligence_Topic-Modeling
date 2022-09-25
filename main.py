@@ -22,30 +22,42 @@ csv.field_size_limit(1000000000)
 # read csv file from data folder
 df = pd.read_csv(os.path.join('data', 'state-of-the-union.csv'), names=['year', 'speech'], skiprows=1)
 
-df['speech'] = df['speech'].str.replace('\nState of the Union Address\n', '')
-df['speech'] = df['speech'].str.replace('\nAddress to Joint Session of Congress \n', '')
-df['speech'] = df['speech'].str.replace('\nAddress on Administration Goals (Budget Message)\n', '')
-df['speech'] = df['speech'].str.replace('\nAddress on Administration Goals\n', '')
-df['speech'] = df['speech'].str.replace('\nAddress to Congress \n', '')
 
-df['president'] = df['speech']
+def perform_initial_cleanup(data_frame):
+    data_frame['speech'] = data_frame['speech'].str.replace('\nState of the Union Address\n', '')
+    data_frame['speech'] = data_frame['speech'].str.replace('\nAddress to Joint Session of Congress \n', '')
+    data_frame['speech'] = data_frame['speech'].str.replace('\nAddress on Administration Goals (Budget Message)\n', '')
+    data_frame['speech'] = data_frame['speech'].str.replace('\nAddress on Administration Goals\n', '')
+    data_frame['speech'] = data_frame['speech'].str.replace('\nAddress to Congress \n', '')
+    data_frame['president'] = data_frame['speech']
+    data_frame['president'] = data_frame['president'].str.split('\n').str[0]
+    data_frame['date'] = data_frame['speech'].str.split('\n').str[1]
+    temp_date = data_frame[data_frame['date'] == 'Address on Administration Goals (Budget Message)']['speech'].str.split('\n').str[3]
+    data_frame['date'][data_frame['date'] == 'Address on Administration Goals (Budget Message)'] = temp_date.values[0]
+    # delete first 3 lines of speech
+    data_frame['speech'] = data_frame['speech'].str.split('\n').str[3:]
+    # make a string list
+    data_frame['speech'] = data_frame['speech'].str.join(' ')
+    # replace \ with ''
+    data_frame['speech'] = data_frame['speech'].str.replace('\\\'', '')
+    # decapitalize
+    data_frame['speech'] = data_frame['speech'].str.lower()
+    # remove punctuation
+    data_frame['speech'] = data_frame['speech'].str.replace('[{}]'.format(string.punctuation), '')
+    # remove word 'America' 'america' 'americas' 'Americas' 'american' 'American' 'Americans' 'American' 'americans'
+    data_frame['speech'] = data_frame['speech'].str.replace('America', '')
+    data_frame['speech'] = data_frame['speech'].str.replace('Americas', '')
+    data_frame['speech'] = data_frame['speech'].str.replace('American', '')
+    data_frame['speech'] = data_frame['speech'].str.replace('Americans', '')
+    data_frame['speech'] = data_frame['speech'].str.replace('america', '')
+    data_frame['speech'] = data_frame['speech'].str.replace('americas', '')
+    data_frame['speech'] = data_frame['speech'].str.replace('american', '')
+    data_frame['speech'] = data_frame['speech'].str.replace('americans', '')
 
-df['president'] = df['president'].str.split('\n').str[0]
-df['date'] = df['speech'].str.split('\n').str[1]
+    return data_frame
 
-temp_date = df[df['date'] == 'Address on Administration Goals (Budget Message)']['speech'].str.split('\n').str[3]
-df['date'][df['date'] == 'Address on Administration Goals (Budget Message)'] = temp_date.values[0]
 
-# delete first 3 lines of speech
-df['speech'] = df['speech'].str.split('\n').str[3:]
-# make a string list
-df['speech'] = df['speech'].str.join(' ')
-# replace \ with ''
-df['speech'] = df['speech'].str.replace('\\\'', '')
-# decapitalize
-df['speech'] = df['speech'].str.lower()
-# remove punctuation
-df['speech'] = df['speech'].str.replace('[{}]'.format(string.punctuation), '')
+df = perform_initial_cleanup(df)
 
 # perform lemmatization
 lemmatizer = WordNetLemmatizer()
