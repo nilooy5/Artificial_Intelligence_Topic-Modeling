@@ -32,7 +32,9 @@ def perform_initial_cleanup(data_frame):
     data_frame['president'] = data_frame['speech']
     data_frame['president'] = data_frame['president'].str.split('\n').str[0]
     data_frame['date'] = data_frame['speech'].str.split('\n').str[1]
-    temp_date = data_frame[data_frame['date'] == 'Address on Administration Goals (Budget Message)']['speech'].str.split('\n').str[3]
+    temp_date = \
+    data_frame[data_frame['date'] == 'Address on Administration Goals (Budget Message)']['speech'].str.split('\n').str[
+        3]
     data_frame['date'][data_frame['date'] == 'Address on Administration Goals (Budget Message)'] = temp_date.values[0]
     # delete first 3 lines of speech
     data_frame['speech'] = data_frame['speech'].str.split('\n').str[3:]
@@ -44,22 +46,13 @@ def perform_initial_cleanup(data_frame):
     data_frame['speech'] = data_frame['speech'].str.lower()
     # remove punctuation
     data_frame['speech'] = data_frame['speech'].str.replace('[{}]'.format(string.punctuation), '')
-    # remove word 'America' 'america' 'americas' 'Americas' 'american' 'American' 'Americans' 'American' 'americans'
-    data_frame['speech'] = data_frame['speech'].str.replace('America', '')
-    data_frame['speech'] = data_frame['speech'].str.replace('Americas', '')
-    data_frame['speech'] = data_frame['speech'].str.replace('American', '')
-    data_frame['speech'] = data_frame['speech'].str.replace('Americans', '')
-    data_frame['speech'] = data_frame['speech'].str.replace('america', '')
-    data_frame['speech'] = data_frame['speech'].str.replace('americas', '')
-    data_frame['speech'] = data_frame['speech'].str.replace('american', '')
-    data_frame['speech'] = data_frame['speech'].str.replace('americans', '')
 
     return data_frame
 
 
 df = perform_initial_cleanup(df)
 
-# perform lemmatization
+# perform initial lemmatization
 lemmatizer = WordNetLemmatizer()
 
 
@@ -73,6 +66,7 @@ df['speech'] = df['speech'].apply(lambda x: ' '.join(x))
 
 NUM_TOPICS = 5
 STOPWORDS = stopwords.words('english')
+STOPWORDS.extend(['America', 'Americas', 'American', 'Americans', 'america', 'americas', 'american', 'americans'])
 
 wnl = WordNetLemmatizer()
 
@@ -93,14 +87,14 @@ def lemmatize_sent(text):
             for word, tag in pos_tag(word_tokenize(text))]
 
 
-def clean_text(text):
+def clean_lemma_text(text):
     tokenized_text = word_tokenize(text.lower())
     cleaned_text = [t for t in tokenized_text if t not in STOPWORDS and re.match('[a-zA-Z\-][a-zA-Z\-]{2,}', t)]
     return lemmatize_sent(' '.join(cleaned_text))
 
 
 # clean the speeches
-tokenized_speeches = df['speech'].apply(clean_text)
+tokenized_speeches = df['speech'].apply(clean_lemma_text)
 
 df['tokens'] = tokenized_speeches
 
@@ -111,37 +105,38 @@ dictionary = corpora.Dictionary(df.tokens)
 # Transform the collection of texts to a numerical form
 corpus = [dictionary.doc2bow(text) for text in df.tokens]
 
-# Build the LDA model
-lda_model = models.LdaModel(corpus=corpus,
-                            num_topics=10,
-                            id2word=dictionary)
 
-print()
-print("LDA Model:")
-
-for idx in range(10):
-    # Print the first 10 most representative topics
-    print("Topic #%s:" % idx, lda_model.print_topic(idx, 10))
-
-# build the LSI model
-lsi_model = models.LsiModel(corpus=corpus,
-                            num_topics=10,
-                            id2word=dictionary)
-
-print()
-print("LSI Model:")
-for idx in range(10):
-    # Print the first 10 most representative topics
-    print("Topic #%s:" % idx, lsi_model.print_topic(idx, 10))
-
-
-df['lda_topic'] = df['tokens']
-# def get_most_popular_topic(index)
-for j in np.arange(0, 225):
-    df['lda_topic'][j] = [i[0] for i in
-                          lda_model.get_document_topics(dictionary.doc2bow(df.tokens[j]), minimum_probability=0.2)]
-
-print(df.head(20))
+# # Build the LDA model
+# lda_model = models.LdaModel(corpus=corpus,
+#                             num_topics=10,
+#                             id2word=dictionary)
+#
+# print()
+# print("LDA Model:")
+#
+# for idx in range(10):
+#     # Print the first 10 most representative topics
+#     print("Topic #%s:" % idx, lda_model.print_topic(idx, 10))
+#
+# # build the LSI model
+# lsi_model = models.LsiModel(corpus=corpus,
+#                             num_topics=10,
+#                             id2word=dictionary)
+#
+# print()
+# print("LSI Model:")
+# for idx in range(10):
+#     # Print the first 10 most representative topics
+#     print("Topic #%s:" % idx, lsi_model.print_topic(idx, 10))
+#
+#
+# df['lda_topic'] = df['tokens']
+# # def get_most_popular_topic(index)
+# for j in np.arange(0, 225):
+#     df['lda_topic'][j] = [i[0] for i in
+#                           lda_model.get_document_topics(dictionary.doc2bow(df.tokens[j]), minimum_probability=0.2)]
+#
+# print(df.head(20))
 
 
 def sotu_topic_finder(year):
@@ -154,7 +149,7 @@ def sotu_topic_finder(year):
     sent_text = sent_tokenize(df.speech[year - 1790])
     token_list = []
     for sent in sent_text:
-        cleaned_sent = clean_text(sent)
+        cleaned_sent = clean_lemma_text(sent)
         token_list.append(cleaned_sent)
 
     # Prepare the dictionary and corpus
@@ -183,8 +178,11 @@ def sotu_topic_finder(year):
         # Print the first 10 most representative topics
         print("Topic #%s:" % idx, lsi_model.print_topic(idx, 10))
 
+    return lda_model, lsi_model
 
+
+yearly_models = []
 for year in range(1990, 2005):
-    sotu_topic_finder(year)
+    yearly_models.append(sotu_topic_finder(year))
 
-
+topics = yearly_models[0][0].print_topics()
