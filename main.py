@@ -4,14 +4,12 @@ import string
 import pandas as pd
 import nltk
 from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem import PorterStemmer
 import re
 from gensim import models, corpora
 from nltk import word_tokenize, sent_tokenize
 from nltk.corpus import stopwords
 from nltk import pos_tag
+import numpy as np
 
 nltk.download('omw-1.4')
 nltk.download('stopwords')
@@ -61,29 +59,6 @@ df['speech'] = df['speech'].apply(lemmatize_text)
 df['speech'] = df['speech'].apply(lambda x: [item for item in x if item not in stop_words])
 df['speech'] = df['speech'].apply(lambda x: ' '.join(x))
 
-# # perform stemming
-# stemmer = PorterStemmer()
-#
-#
-# def stem_text(text):
-#     return [stemmer.stem(w) for w in word_tokenize(text)]
-#
-#
-# df['speech'] = df['speech'].apply(stem_text)
-# df['speech'] = df['speech'].apply(lambda x: [item for item in x if item not in stop_words])
-# df['speech'] = df['speech'].apply(lambda x: ' '.join(x))
-#
-print(df['speech'].values[0])
-#
-# from gensim import corpora
-#
-# # create a dictionary from a list of speeches
-# dictionary = corpora.Dictionary(df['speech'])
-#
-# # convert the dictionary to a bag of words
-# corpus = [dictionary.doc2bow(speech) for speech in df['speech']]
-# print(corpus[0])
-
 NUM_TOPICS = 5
 STOPWORDS = stopwords.words('english')
 
@@ -112,14 +87,10 @@ def clean_text(text):
     return lemmatize_sent(' '.join(cleaned_text))
 
 
-# tokenize speeches and save them in a list
-tokenized_speeches = [word_tokenize(speech) for speech in df['speech']]
-# save tokenized speech to new column
+# clean the speeches
+tokenized_speeches = df['speech'].apply(clean_text)
+
 df['tokens'] = tokenized_speeches
-print(df['tokens'].values[0])
-print(df['tokens'].values[1])
-print(df['tokens'].values[2])
-print(df['tokens'].values[3])
 
 # Build a Dictionary - association word to numeric id
 dictionary = corpora.Dictionary(df.tokens)
@@ -130,26 +101,78 @@ corpus = [dictionary.doc2bow(text) for text in df.tokens]
 
 # Build the LDA model
 lda_model = models.LdaModel(corpus=corpus,
-                            num_topics=20,
+                            num_topics=10,
                             id2word=dictionary)
 
 print()
 print("LDA Model:")
 
-for idx in range(20):
+for idx in range(10):
     # Print the first 10 most representative topics
-    print("Topic #%s:" % idx, lda_model.print_topic(idx, 20))
-
+    print("Topic #%s:" % idx, lda_model.print_topic(idx, 10))
 
 # build the LSI model
-lsi_model = models.LsiModel(corpus=corpus, num_topics=20, id2word=dictionary)
+lsi_model = models.LsiModel(corpus=corpus,
+                            num_topics=10,
+                            id2word=dictionary)
 
 print()
 print("LSI Model:")
-for idx in range(20):
+for idx in range(10):
     # Print the first 10 most representative topics
-    print("Topic #%s:" % idx, lsi_model.print_topic(idx, 20))
+    print("Topic #%s:" % idx, lsi_model.print_topic(idx, 10))
 
-print()
-print("first 20")
-print(lsi_model.print_topic(1,20))
+
+df['lda_topic'] = df['tokens']
+# def get_most_popular_topic(index)
+for j in np.arange(0, 225):
+    df['lda_topic'][j] = [i[0] for i in
+                          lda_model.get_document_topics(dictionary.doc2bow(df.tokens[j]), minimum_probability=0.2)]
+
+print(df.head(20))
+
+
+def sotu_topic_finder(year):
+    """
+    Find SOTU topics using LDA. The LDA model is only trained on the text of that year topic
+    Input: index i of the speech
+    Output: list 5 topics found by the model
+    """
+    # Clean the text
+    sent_text = sent_tokenize(df.speech[year - 1790])
+    token_list = []
+    for sent in sent_text:
+        cleaned_sent = clean_text(sent)
+        token_list.append(cleaned_sent)
+
+    # Prepare the dictionary and corpus
+    dictionary = corpora.Dictionary(token_list)
+    corpus = [dictionary.doc2bow(text) for text in token_list]
+
+    # Build the LDA model
+    lda_model = models.LdaModel(corpus=corpus,
+                                num_topics=10,
+                                id2word=dictionary)
+
+    # Output model
+    print("LDA Model of %i:" % year)
+    for idx in range(5):
+        # Print the first 10 most representative topics
+        print("Topic #%s:" % idx, lda_model.print_topic(idx, 10))
+
+    # build the LSI model
+    lsi_model = models.LsiModel(corpus=corpus,
+                                num_topics=10,
+                                id2word=dictionary)
+
+    print()
+    print("LSI Model of %i:" % year)
+    for idx in range(5):
+        # Print the first 10 most representative topics
+        print("Topic #%s:" % idx, lsi_model.print_topic(idx, 10))
+
+
+for year in range(1990, 2005):
+    sotu_topic_finder(year)
+
+
